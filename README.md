@@ -8,7 +8,7 @@ This script is using an Internet connection to fetch video data from Youtube. If
 
 ## Requirements
 
-The dependancies can be installed from the requirements.txt file with
+The dependencies can be installed from the requirements.txt file with the following command:
 
 ```bash
 pip install -r requirements.txt
