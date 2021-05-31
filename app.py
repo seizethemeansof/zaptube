@@ -1,6 +1,8 @@
 from flask import Flask, render_template, Response
 import cv2
 from zaptube import VideoStream
+from time import sleep
+import sys
 
 
 app = Flask(__name__)
@@ -26,14 +28,21 @@ def index():
 
 
 video_stream = VideoStream(urls, transition_url)
-video_stream.start_url_buffering()
-video_stream.start_video_buffering()
+video_stream.url_buffering_thread.start()
+video_stream.video_buffering_thread.start()
 
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(video_stream.play_video_thread(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(video_stream.playVideoThread(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 if __name__ == "__main__":
     app.run(debug=True)
+    while True:
+        try:
+            sleep(10)
+        except KeyboardInterrupt:
+            print('Main loop interrupted')
+            video_stream.shutdown()
+            sys.exit(0)

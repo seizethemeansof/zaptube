@@ -7,6 +7,7 @@ import random
 from threading import Thread
 from multiprocessing import Process
 import traceback
+import sys
 
 
 # urls = [
@@ -37,6 +38,9 @@ class VideoStream():
         # Met le brouillage initial
         self.transition_frames_list = self.extract_transition_frames(1)
         self.zaptube.put(self.create_transition_frames_queue())
+        self.play = True
+        self.url_buffering_thread = Thread(target=self.urlBufferingThread, daemon=True)
+        self.video_buffering_thread = Thread(target=self.videoBufferingThread, daemon=True)
 
     def extract_transition_frames(self, seconds):
         video_frames = []
@@ -97,9 +101,9 @@ class VideoStream():
         self.BUFFERING_NOW -= 1
         print('Done extracting')
 
-    def url_buffering_thread(self):
+    def urlBufferingThread(self):
         print('Starting video buffering')
-        while True:
+        while self.play == True:
             print('Buffering: {}, Zaptube; {}'.format(
                 self.BUFFERING_NOW, self.zaptube.qsize()))
             if (self.BUFFERING_NOW < 3) & (self.zaptube.qsize() < 8):
@@ -107,51 +111,46 @@ class VideoStream():
                 url = random.choice(self.urls)
                 self.url_to_buffer.put(url)
             else:
-                sleep(3)
+                sleep(5)
+        print('Stopping url buffering')
 
-    def start_url_buffering(self):
-        u_thread = Thread(target=self.url_buffering_thread)
-        u_thread.start()
+    def videoBufferingThread(self):
+        while self.play == True:
+            try:
+                url = self.url_to_buffer.get_nowait()
+                self.process_url(url)
+            except:
+                sleep(5)
+        print('Stopping video buffering thread')
 
-    def video_buffering_thread(self):
-        while True:
-            url = self.url_to_buffer.get()
-            self.process_url(url)
-
-    def start_video_buffering(self):
-        vb_thread = Thread(target=self.video_buffering_thread)
-        vb_thread.start()
-
-    def play_video_thread(self):
-        play = True
+    def playVideoThread(self):
         while self.zaptube.qsize() < 8:
             sleep(5)
-        try:
-            while play:
-                video = self.zaptube.get()
-                prev = 0
-                frame, fps = video.get()
-                ret, buffer = cv2.imencode('.jpg', frame)
-                frame = buffer.tobytes()
-                yield (b'--frame\r\n'
-                     b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
-                while video.qsize() > 0:
-                    time_elapsed = time() - prev
-                    if time_elapsed > 1/fps * 0.5:
-                        frame, fps = video.get()
-                        ret, buffer = cv2.imencode('.jpg', frame)
-                        frame = buffer.tobytes()
-                        yield (b'--frame\r\n'
-                            b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
-                        prev = time()
-                if self.zaptube.qsize() == 0:
-                    sleep(10)
-        except Exception:
-            print(traceback.format_exc())
+        while self.play == True:
+            video = self.zaptube.get()
+            prev = 0
+            frame, fps = video.get()
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+            yield (b'--frame\r\n'
+                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
+            while video.qsize() > 0:
+                time_elapsed = time() - prev
+                if time_elapsed > 1/fps * 0.5:
+                    frame, fps = video.get()
+                    ret, buffer = cv2.imencode('.jpg', frame)
+                    frame = buffer.tobytes()
+                    yield (b'--frame\r\n'
+                        b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
+                    prev = time()
+            if self.zaptube.qsize() == 0:
+                sleep(10)
+        print('Stopping video playing')
 
-    def start_play_video(self):
-        play_video_thread = Thread(target=self.play_video_thread)
-        play_video_thread.start()
+    def shutdown(self):
+        print('Shutting down')
+        self.play = False
+        cv2.destroyAllWindows()
 
 
 def main():
