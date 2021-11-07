@@ -27,22 +27,10 @@ def index():
     return render_template('index.html')
 
 
-video_stream = VideoStream(urls, transition_url)
-video_stream.url_buffering_thread.start()
-video_stream.video_buffering_thread.start()
-
-
 @app.route('/video_feed')
 def video_feed():
-    return Response(video_stream.playVideoThread(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(VideoStream(urls, transition_url).play_video(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 if __name__ == "__main__":
     app.run(debug=True)
-    while True:
-        try:
-            sleep(10)
-        except KeyboardInterrupt:
-            print('Main loop interrupted')
-            video_stream.shutdown()
-            sys.exit(0)

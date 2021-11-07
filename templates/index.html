@@ -1,10 +1,15 @@
-<body>
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-8  offset-lg-2">
-                <h3 class="mt-5">Zaptube</h3>
-                <img src="{{ url_for('video_feed') }}" width="100%">
-            </div>
-        </div>
-    </div>
+<html>
+    <head>
+        <link rel="stylesheet" href="{{url_for('static', filename='styles.css')}}" />
+    </head>
+    <body>
+        <img id="videoimg" src="{{ url_for('video_feed') }}" style="display: none;" width="100%">
+<!--        <img id="videoimg" src="{{ url_for('video_feed') }}" width="100%">-->
+        <canvas id="canvas"></canvas>
+        <script  id="vertex-shader-2d" src="{{url_for('static', filename='vert.js')}}"></script>
+        <script  id="fragment-shader-2d" src="{{url_for('static', filename='dirty_crt_frag.js')}}"></script>
+        <!-- WebGL utilities -->
+        <script src="https://webglfundamentals.org/webgl/resources/webgl-utils.js"></script>
+        <script src="{{url_for('static', filename='shader.js')}}"></script>
     </body>
+</html>
